@@ -6,7 +6,7 @@ from absl import logging
 
 import numpy as np
 import sklearn
-from sklearn.externals import joblib
+import joblib
 
 
 def sigmoid(x):

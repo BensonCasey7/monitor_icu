@@ -12,7 +12,7 @@ import torch.utils.data
 import random
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from sklearn.externals import joblib
+import joblib
 
 
 class MimicDataset(torch.utils.data.Dataset):
