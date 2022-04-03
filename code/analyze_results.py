@@ -9,12 +9,12 @@ import sys
 import joblib
 
 if len(sys.argv) != 2:
-  print("Usage: python %s <file_path>" % sys.argv[0])
-  sys.exit(1)
+    print("Usage: python %s <file_path>" % sys.argv[0])
+    sys.exit(1)
 
 data = joblib.load(sys.argv[1])
 
 for k, v in data.items():
-  print("hadm_id: %s" % k)
-  print(v)
-  break
+    print("hadm_id: %s" % k)
+    print(v)
+    break

@@ -84,504 +84,503 @@ default_standard_scaler_name = "standard_scaler.joblib"
 
 
 def train(configs):
-  root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
-  phase = "training"
+    root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
+    phase = "training"
 
-  with open(os.path.join(root_dir, "running_configs.cfg"), "w") as fp:
-    fp.write("python ")
-    for i, x in enumerate(sys.argv):
-      logging.info("%d: %s", i, x)
-      fp.write("%s \\\n" % x)
+    with open(os.path.join(root_dir, "running_configs.cfg"), "w") as fp:
+        fp.write("python ")
+        for i, x in enumerate(sys.argv):
+            logging.info("%d: %s", i, x)
+            fp.write("%s \\\n" % x)
 
-  logging.info("Creating dataset...")
-  train_dataset = MimicDataset(
-      data_split=FLAGS.train_data_split,
-      data_dir=configs["data_dir"],
-      block_size=configs["block_size"],
-      target_label=configs["target_label"],
-      history_window=configs["history_window"],
-      prediction_window=configs["prediction_window"],
-      dataset_size=FLAGS.train_dataset_size,
-      pca_dim=configs["input_size"],
-      pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
-      standardize=configs["standardize"],
-      standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
-      phase="training",
-      upper_bound_factor=FLAGS.upper_bound_factor,
-  )
-  logging.info("Creating dataset completed!")
+    logging.info("Creating dataset...")
+    train_dataset = MimicDataset(
+        data_split=FLAGS.train_data_split,
+        data_dir=configs["data_dir"],
+        block_size=configs["block_size"],
+        target_label=configs["target_label"],
+        history_window=configs["history_window"],
+        prediction_window=configs["prediction_window"],
+        dataset_size=FLAGS.train_dataset_size,
+        pca_dim=configs["input_size"],
+        pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
+        standardize=configs["standardize"],
+        standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
+        phase="training",
+        upper_bound_factor=FLAGS.upper_bound_factor,
+    )
+    logging.info("Creating dataset completed!")
 
-  logging.info("Creating dataset loader...")
-  train_loader = torch.utils.data.DataLoader(
-      dataset=train_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      drop_last=False,
-  )
-  logging.info("Creating dataset loader completed!")
+    logging.info("Creating dataset loader...")
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        drop_last=False,
+    )
+    logging.info("Creating dataset loader completed!")
 
-  logging.info("Creating model for training...")
-  model = MimicModel(
-      model_type=configs["model_type"],
-      input_size=configs["input_size"],
-      use_attention=configs["use_attention"],
-      rnn_hidden_size=configs["rnn_hidden_size"],
-      rnn_type=configs["rnn_type"],
-      rnn_layers=configs["rnn_layers"],
-      rnn_dropout=configs["rnn_dropout"],
-      rnn_bidirectional=configs["rnn_bidirectional"],
-      lr_pooling=configs["lr_pooling"],
-      lr_history_window=configs["history_window"],
-  )
-  logging.info("Creating model for training completed.")
+    logging.info("Creating model for training...")
+    model = MimicModel(
+        model_type=configs["model_type"],
+        input_size=configs["input_size"],
+        use_attention=configs["use_attention"],
+        rnn_hidden_size=configs["rnn_hidden_size"],
+        rnn_type=configs["rnn_type"],
+        rnn_layers=configs["rnn_layers"],
+        rnn_dropout=configs["rnn_dropout"],
+        rnn_bidirectional=configs["rnn_bidirectional"],
+        lr_pooling=configs["lr_pooling"],
+        lr_history_window=configs["history_window"],
+    )
+    logging.info("Creating model for training completed.")
 
-  logging.info("Training dataset size: %d", len(train_dataset))
-  logging.info("Batches in each epoch: %d", len(train_loader))
+    logging.info("Training dataset size: %d", len(train_dataset))
+    logging.info("Batches in each epoch: %d", len(train_loader))
 
-  model.train()
+    model.train()
 
-  criterion = torch.nn.BCEWithLogitsLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
 
-  trainable_params = [x for x in model.named_parameters() if x[1].requires_grad]
+    trainable_params = [x for x in model.named_parameters() if x[1].requires_grad]
 
-  logging.info("Model parameters:")
-  for name, param in trainable_params:
-    logging.info("%s: %s", name, param.size())
+    logging.info("Model parameters:")
+    for name, param in trainable_params:
+        logging.info("%s: %s", name, param.size())
 
-  optimizer = torch.optim.RMSprop(model.parameters(), lr=FLAGS.learning_rate)
-  scheduler = torch.optim.lr_scheduler.StepLR(
-      optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=FLAGS.learning_rate)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
 
-  summary_writer = SummaryWriter(log_dir=root_dir)
+    summary_writer = SummaryWriter(log_dir=root_dir)
 
-  logging.info("Initializatoin complete. Start training.")
-  try:
-    for epoch in range(FLAGS.num_epochs):
-      scheduler.step()
+    logging.info("Initializatoin complete. Start training.")
+    try:
+        for epoch in range(FLAGS.num_epochs):
+            scheduler.step()
 
-      summary_writer.add_scalar("learning_rate",
-                                scheduler.get_lr()[0], epoch + 1)
+            summary_writer.add_scalar("learning_rate",
+                                      scheduler.get_lr()[0], epoch + 1)
 
-      # Resample training dataset.
-      train_dataset.resample()
-      y_true, y_score = [], []
+            # Resample training dataset.
+            train_dataset.resample()
+            y_true, y_score = [], []
 
-      start_time = time.time()
-      for step, (inputs, labels, _) in enumerate(train_loader):
+            start_time = time.time()
+            for step, (inputs, labels, _) in enumerate(train_loader):
 
-        logging.info("Data shape: %s", inputs.shape)
+                logging.info("Data shape: %s", inputs.shape)
 
-        optimizer.zero_grad()
+                optimizer.zero_grad()
 
-        with torch.set_grad_enabled(True):
-          logits, _ = model(inputs)
-          loss = criterion(input=logits, target=labels.float())
-          summary_writer.add_scalar("training/loss", loss.item(),
-                                    epoch * len(train_loader) + step)
-          loss.backward()
-          optimizer.step()
+                with torch.set_grad_enabled(True):
+                    logits, _ = model(inputs)
+                    loss = criterion(input=logits, target=labels.float())
+                    summary_writer.add_scalar("training/loss", loss.item(),
+                                              epoch * len(train_loader) + step)
+                    loss.backward()
+                    optimizer.step()
 
-        y_true.append(labels.detach().numpy())
-        y_score.append(logits.detach().numpy())
+                y_true.append(labels.detach().numpy())
+                y_score.append(logits.detach().numpy())
 
-        if (step + 1) % 10 == 0:
-          end_time = time.time()
-          logging.info(
-              'Epoch [{}/{}], Step [{}/{}], Loss: {:.6f}, Speed: {:.4f} ms'.
-              format(epoch + 1, FLAGS.num_epochs, step + 1, len(train_loader),
-                     loss.item(),
-                     (end_time - start_time) * 100 / logits.shape[0]))
-          start_time = time.time()
+                if (step + 1) % 10 == 0:
+                    end_time = time.time()
+                    logging.info(
+                        'Epoch [{}/{}], Step [{}/{}], Loss: {:.6f}, Speed: {:.4f} ms'.
+                            format(epoch + 1, FLAGS.num_epochs, step + 1, len(train_loader),
+                                   loss.item(),
+                                   (end_time - start_time) * 100 / logits.shape[0]))
+                    start_time = time.time()
 
-      utilities.update_metrics(y_true, y_score, phase, summary_writer,
-                               epoch + 1)
+            utilities.update_metrics(y_true, y_score, phase, summary_writer,
+                                     epoch + 1)
 
-      if (epoch + 1) % configs["save_per_epochs"] == 0:
+            if (epoch + 1) % configs["save_per_epochs"] == 0:
+                logging.info("Saving model checkpoint...")
+                checkpoint_name = os.path.join(
+                    root_dir, "checkpoint_epoch%03d.model" % (epoch + 1))
+                torch.save(model.state_dict(), checkpoint_name)
+
+    except KeyboardInterrupt:
+        logging.info("Interruppted. Stop training.")
         logging.info("Saving model checkpoint...")
         checkpoint_name = os.path.join(
-            root_dir, "checkpoint_epoch%03d.model" % (epoch + 1))
+            root_dir, "checkpoint_epoch%03d_step%03d.model" % (epoch + 1, step + 1))
         torch.save(model.state_dict(), checkpoint_name)
 
-  except KeyboardInterrupt:
-    logging.info("Interruppted. Stop training.")
-    logging.info("Saving model checkpoint...")
-    checkpoint_name = os.path.join(
-        root_dir, "checkpoint_epoch%03d_step%03d.model" % (epoch + 1, step + 1))
-    torch.save(model.state_dict(), checkpoint_name)
+        logging.info("Model saved at %s", checkpoint_name)
+    finally:
+        logging.info("Training is terminated.")
 
-    logging.info("Model saved at %s", checkpoint_name)
-  finally:
-    logging.info("Training is terminated.")
-
-  return
+    return
 
 
 def inference(configs):
-  root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
-  phase = "evaluation"
+    root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
+    phase = "evaluation"
 
-  for i, x in enumerate(sys.argv):
-    logging.info("%d: %s", i, x)
+    for i, x in enumerate(sys.argv):
+        logging.info("%d: %s", i, x)
 
-  eval_dataset = MimicDataset(
-      data_split=FLAGS.eval_data_split,
-      data_dir=configs["data_dir"],
-      block_size=configs["block_size"],
-      target_label=configs["target_label"],
-      history_window=configs["history_window"],
-      prediction_window=configs["prediction_window"],
-      dataset_size=FLAGS.eval_dataset_size,
-      pca_dim=configs["input_size"],
-      pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
-      standardize=configs["standardize"],
-      standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
-      phase="inference",
-      upper_bound_factor=configs["upper_bound_factor"],
-      fix_dataset_seed=configs["fix_eval_dataset_seed"],
-  )
-
-  eval_loader = torch.utils.data.DataLoader(
-      dataset=eval_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      drop_last=False,
-  )
-
-  model = MimicModel(
-      model_type=configs["model_type"],
-      input_size=configs["input_size"],
-      use_attention=configs["use_attention"],
-      rnn_hidden_size=configs["rnn_hidden_size"],
-      rnn_type=configs["rnn_type"],
-      rnn_layers=configs["rnn_layers"],
-      rnn_dropout=configs["rnn_dropout"],
-      rnn_bidirectional=configs["rnn_bidirectional"],
-      lr_pooling=configs["lr_pooling"],
-      lr_history_window=configs["history_window"],
-  )
-
-  if FLAGS.eval_checkpoint:
-    logging.info("Evaluate checkpoint %s", FLAGS.eval_checkpoint)
-    model_checkpoints = [FLAGS.eval_checkpoint]
-  else:
-    model_checkpoints = [
-        os.path.join(root_dir, x)
-        for x in os.listdir(root_dir)
-        if x.endswith(".model") and "step" not in x
-    ]
-    logging.info("Total number of checkpoints: %d", len(model_checkpoints))
-    for i, x in enumerate(model_checkpoints):
-      logging.info("%d: %s", i, x)
-
-  for checkpoint_path in model_checkpoints:
-    model.load_state_dict(torch.load(checkpoint_path))
-    logging.info("Load model from: %s", checkpoint_path)
-
-    prediction = utilities.Prediction(
+    eval_dataset = MimicDataset(
+        data_split=FLAGS.eval_data_split,
+        data_dir=configs["data_dir"],
         block_size=configs["block_size"],
+        target_label=configs["target_label"],
         history_window=configs["history_window"],
-        prediction_window=configs["prediction_window"])
+        prediction_window=configs["prediction_window"],
+        dataset_size=FLAGS.eval_dataset_size,
+        pca_dim=configs["input_size"],
+        pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
+        standardize=configs["standardize"],
+        standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
+        phase="inference",
+        upper_bound_factor=configs["upper_bound_factor"],
+        fix_dataset_seed=configs["fix_eval_dataset_seed"],
+    )
 
-    model.eval()
+    eval_loader = torch.utils.data.DataLoader(
+        dataset=eval_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        drop_last=False,
+    )
 
-    logging.info("Initializatoin complete. Start inference.")
+    model = MimicModel(
+        model_type=configs["model_type"],
+        input_size=configs["input_size"],
+        use_attention=configs["use_attention"],
+        rnn_hidden_size=configs["rnn_hidden_size"],
+        rnn_type=configs["rnn_type"],
+        rnn_layers=configs["rnn_layers"],
+        rnn_dropout=configs["rnn_dropout"],
+        rnn_bidirectional=configs["rnn_bidirectional"],
+        lr_pooling=configs["lr_pooling"],
+        lr_history_window=configs["history_window"],
+    )
 
-    y_true, y_score = [], []
-    with torch.set_grad_enabled(False):
-      for i, (inputs, labels, data_info) in enumerate(eval_loader):
-        logits, endpoints = model(inputs)
+    if FLAGS.eval_checkpoint:
+        logging.info("Evaluate checkpoint %s", FLAGS.eval_checkpoint)
+        model_checkpoints = [FLAGS.eval_checkpoint]
+    else:
+        model_checkpoints = [
+            os.path.join(root_dir, x)
+            for x in os.listdir(root_dir)
+            if x.endswith(".model") and "step" not in x
+        ]
+        logging.info("Total number of checkpoints: %d", len(model_checkpoints))
+        for i, x in enumerate(model_checkpoints):
+            logging.info("%d: %s", i, x)
 
-        if "attention_scores" in endpoints:
-          attention_score = endpoints["attention_scores"]
-        else:
-          attention_score = None
+    for checkpoint_path in model_checkpoints:
+        model.load_state_dict(torch.load(checkpoint_path))
+        logging.info("Load model from: %s", checkpoint_path)
 
-        if "outputs" in endpoints:
-          outputs = endpoints["outputs"]
-        else:
-          outputs = None
+        prediction = utilities.Prediction(
+            block_size=configs["block_size"],
+            history_window=configs["history_window"],
+            prediction_window=configs["prediction_window"])
 
-        prediction.add_prediction(data_info, logits, labels, attention_score,
-                                  outputs)
+        model.eval()
 
-        y_true.append(labels.numpy())
-        y_score.append(logits.numpy())
+        logging.info("Initializatoin complete. Start inference.")
 
-        if (i + 1) % 10 == 0:
-          logging.info("Progress: %d / %d", i + 1, len(eval_loader))
+        y_true, y_score = [], []
+        with torch.set_grad_enabled(False):
+            for i, (inputs, labels, data_info) in enumerate(eval_loader):
+                logits, endpoints = model(inputs)
 
-      utilities.update_metrics(y_true, y_score, phase)
+                if "attention_scores" in endpoints:
+                    attention_score = endpoints["attention_scores"]
+                else:
+                    attention_score = None
 
-    prediction.save_inference_results(
-        checkpoint_path.replace(".model",
-                                "_eval_on_%s.joblib" % FLAGS.eval_data_split))
-  logging.info("Evaluation on %d models complete.", len(model_checkpoints))
+                if "outputs" in endpoints:
+                    outputs = endpoints["outputs"]
+                else:
+                    outputs = None
 
-  return
+                prediction.add_prediction(data_info, logits, labels, attention_score,
+                                          outputs)
+
+                y_true.append(labels.numpy())
+                y_score.append(logits.numpy())
+
+                if (i + 1) % 10 == 0:
+                    logging.info("Progress: %d / %d", i + 1, len(eval_loader))
+
+            utilities.update_metrics(y_true, y_score, phase)
+
+        prediction.save_inference_results(
+            checkpoint_path.replace(".model",
+                                    "_eval_on_%s.joblib" % FLAGS.eval_data_split))
+    logging.info("Evaluation on %d models complete.", len(model_checkpoints))
+
+    return
 
 
 def pipeline(configs):
-  root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
+    root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
 
-  with open(os.path.join(root_dir, "running_configs.cfg"), "w") as fp:
-    fp.write("python ")
-    for i, x in enumerate(sys.argv):
-      logging.info("%d: %s", i, x)
-      fp.write("%s \\\n" % x)
+    with open(os.path.join(root_dir, "running_configs.cfg"), "w") as fp:
+        fp.write("python ")
+        for i, x in enumerate(sys.argv):
+            logging.info("%d: %s", i, x)
+            fp.write("%s \\\n" % x)
 
-  train_dataset = MimicDataset(
-      data_split=FLAGS.train_data_split,
-      data_dir=configs["data_dir"],
-      block_size=configs["block_size"],
-      target_label=configs["target_label"],
-      history_window=configs["history_window"],
-      prediction_window=configs["prediction_window"],
-      dataset_size=FLAGS.train_dataset_size,
-      pca_dim=configs["input_size"],
-      pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
-      standardize=configs["standardize"],
-      standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
-      phase="training",
-      upper_bound_factor=configs["upper_bound_factor"],
-  )
-  train_loader = torch.utils.data.DataLoader(
-      dataset=train_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      drop_last=False,
-  )
+    train_dataset = MimicDataset(
+        data_split=FLAGS.train_data_split,
+        data_dir=configs["data_dir"],
+        block_size=configs["block_size"],
+        target_label=configs["target_label"],
+        history_window=configs["history_window"],
+        prediction_window=configs["prediction_window"],
+        dataset_size=FLAGS.train_dataset_size,
+        pca_dim=configs["input_size"],
+        pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
+        standardize=configs["standardize"],
+        standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
+        phase="training",
+        upper_bound_factor=configs["upper_bound_factor"],
+    )
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        drop_last=False,
+    )
 
-  eval_dataset = MimicDataset(
-      data_split=FLAGS.eval_data_split,
-      data_dir=configs["data_dir"],
-      block_size=configs["block_size"],
-      target_label=configs["target_label"],
-      history_window=configs["history_window"],
-      prediction_window=configs["prediction_window"],
-      dataset_size=FLAGS.eval_dataset_size,
-      pca_dim=configs["input_size"],
-      pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
-      standardize=configs["standardize"],
-      standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
-      phase="inference",
-      upper_bound_factor=configs["upper_bound_factor"],
-      fix_dataset_seed=configs["fix_eval_dataset_seed"],
-  )
-  eval_loader = torch.utils.data.DataLoader(
-      dataset=eval_dataset,
-      batch_size=FLAGS.batch_size,
-      shuffle=True,
-      drop_last=False,
-  )
+    eval_dataset = MimicDataset(
+        data_split=FLAGS.eval_data_split,
+        data_dir=configs["data_dir"],
+        block_size=configs["block_size"],
+        target_label=configs["target_label"],
+        history_window=configs["history_window"],
+        prediction_window=configs["prediction_window"],
+        dataset_size=FLAGS.eval_dataset_size,
+        pca_dim=configs["input_size"],
+        pca_decomposer_path=os.path.join(root_dir, default_decomposer_name),
+        standardize=configs["standardize"],
+        standard_scaler_path=os.path.join(root_dir, default_standard_scaler_name),
+        phase="inference",
+        upper_bound_factor=configs["upper_bound_factor"],
+        fix_dataset_seed=configs["fix_eval_dataset_seed"],
+    )
+    eval_loader = torch.utils.data.DataLoader(
+        dataset=eval_dataset,
+        batch_size=FLAGS.batch_size,
+        shuffle=True,
+        drop_last=False,
+    )
 
-  model = MimicModel(
-      model_type=configs["model_type"],
-      input_size=configs["input_size"],
-      use_attention=configs["use_attention"],
-      rnn_hidden_size=configs["rnn_hidden_size"],
-      rnn_type=configs["rnn_type"],
-      rnn_layers=configs["rnn_layers"],
-      rnn_dropout=configs["rnn_dropout"],
-      rnn_bidirectional=configs["rnn_bidirectional"],
-      lr_pooling=configs["lr_pooling"],
-      lr_history_window=configs["history_window"],
-  )
+    model = MimicModel(
+        model_type=configs["model_type"],
+        input_size=configs["input_size"],
+        use_attention=configs["use_attention"],
+        rnn_hidden_size=configs["rnn_hidden_size"],
+        rnn_type=configs["rnn_type"],
+        rnn_layers=configs["rnn_layers"],
+        rnn_dropout=configs["rnn_dropout"],
+        rnn_bidirectional=configs["rnn_bidirectional"],
+        lr_pooling=configs["lr_pooling"],
+        lr_history_window=configs["history_window"],
+    )
 
-  logging.info("Training dataset size: %d", len(train_dataset))
-  logging.info("Batches in each epoch: %d", len(train_loader))
-  logging.info("Evaluation on `%s`", FLAGS.eval_data_split)
-  logging.info("Evaluation dataset size: %d", len(eval_dataset))
-  logging.info("Batches in each epoch: %d", len(eval_loader))
+    logging.info("Training dataset size: %d", len(train_dataset))
+    logging.info("Batches in each epoch: %d", len(train_loader))
+    logging.info("Evaluation on `%s`", FLAGS.eval_data_split)
+    logging.info("Evaluation dataset size: %d", len(eval_dataset))
+    logging.info("Batches in each epoch: %d", len(eval_loader))
 
-  criterion = torch.nn.BCEWithLogitsLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
 
-  trainable_params = [x for x in model.named_parameters() if x[1].requires_grad]
+    trainable_params = [x for x in model.named_parameters() if x[1].requires_grad]
 
-  logging.info("Model parameters:")
-  for name, param in trainable_params:
-    logging.info("%s: %s", name, param.size())
+    logging.info("Model parameters:")
+    for name, param in trainable_params:
+        logging.info("%s: %s", name, param.size())
 
-  optimizer = torch.optim.RMSprop(model.parameters(), lr=FLAGS.learning_rate)
-  scheduler = torch.optim.lr_scheduler.StepLR(
-      optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
+    optimizer = torch.optim.RMSprop(model.parameters(), lr=FLAGS.learning_rate)
+    scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
 
-  best_metrics = {}
-  best_checkpoint_name = os.path.join(
-      root_dir, "checkpoint_best_{metric}_on_%s_epoch{epoch:03d}.model"
-  ) % FLAGS.eval_data_split
+    best_metrics = {}
+    best_checkpoint_name = os.path.join(
+        root_dir, "checkpoint_best_{metric}_on_%s_epoch{epoch:03d}.model"
+    ) % FLAGS.eval_data_split
 
-  summary_writer = SummaryWriter(log_dir=root_dir)
+    summary_writer = SummaryWriter(log_dir=root_dir)
 
-  try:
-    for epoch in range(FLAGS.num_epochs):
-      logging.info("Start training.")
-      phase = "training"
-      model.train()
+    try:
+        for epoch in range(FLAGS.num_epochs):
+            logging.info("Start training.")
+            phase = "training"
+            model.train()
 
-      scheduler.step()
-      summary_writer.add_scalar("learning_rate",
-                                scheduler.get_lr()[0], epoch + 1)
+            scheduler.step()
+            summary_writer.add_scalar("learning_rate",
+                                      scheduler.get_lr()[0], epoch + 1)
 
-      # Resample training dataset.
-      train_dataset.resample()
-      y_true, y_score = [], []
+            # Resample training dataset.
+            train_dataset.resample()
+            y_true, y_score = [], []
 
-      start_time = time.time()
-      for step, (inputs, labels, _) in enumerate(train_loader):
+            start_time = time.time()
+            for step, (inputs, labels, _) in enumerate(train_loader):
 
-        optimizer.zero_grad()
+                optimizer.zero_grad()
 
-        with torch.set_grad_enabled(True):
-          logits, _ = model(inputs)
-          loss = criterion(input=logits, target=labels.float())
-          summary_writer.add_scalar("%s/loss" % phase, loss.item(),
-                                    epoch * len(train_loader) + step)
-          loss.backward()
-          optimizer.step()
+                with torch.set_grad_enabled(True):
+                    logits, _ = model(inputs)
+                    loss = criterion(input=logits, target=labels.float())
+                    summary_writer.add_scalar("%s/loss" % phase, loss.item(),
+                                              epoch * len(train_loader) + step)
+                    loss.backward()
+                    optimizer.step()
 
-        y_true.append(labels.detach().numpy())
-        y_score.append(logits.detach().numpy())
+                y_true.append(labels.detach().numpy())
+                y_score.append(logits.detach().numpy())
 
-        if (step + 1) % 10 == 0:
-          end_time = time.time()
-          logging.info(
-              'Epoch [{}/{}], Step [{}/{}], Loss: {:.6f}, Speed: {:.4f} ms'.
-              format(epoch + 1, FLAGS.num_epochs, step + 1, len(train_loader),
-                     loss.item(),
-                     (end_time - start_time) * 100 / logits.shape[0]))
-          start_time = time.time()
+                if (step + 1) % 10 == 0:
+                    end_time = time.time()
+                    logging.info(
+                        'Epoch [{}/{}], Step [{}/{}], Loss: {:.6f}, Speed: {:.4f} ms'.
+                            format(epoch + 1, FLAGS.num_epochs, step + 1, len(train_loader),
+                                   loss.item(),
+                                   (end_time - start_time) * 100 / logits.shape[0]))
+                    start_time = time.time()
 
-      utilities.update_metrics(y_true, y_score, phase, summary_writer,
-                               epoch + 1)
+            utilities.update_metrics(y_true, y_score, phase, summary_writer,
+                                     epoch + 1)
 
-      checkpoint_name = os.path.join(root_dir,
-                                     "checkpoint_epoch%03d.model" % (epoch + 1))
+            checkpoint_name = os.path.join(root_dir,
+                                           "checkpoint_epoch%03d.model" % (epoch + 1))
 
-      if (epoch + 1) % configs["save_per_epochs"] == 0:
+            if (epoch + 1) % configs["save_per_epochs"] == 0:
+                logging.info("Saving model checkpoint...")
+                torch.save(model.state_dict(), checkpoint_name)
+
+            phase = "evaluation"
+            model.eval()
+            logging.info("Start inference.")
+
+            y_true, y_score = [], []
+            with torch.set_grad_enabled(False):
+                for i, (inputs, labels, _) in enumerate(eval_loader):
+                    logits, endpoints = model(inputs)
+                    loss = criterion(input=logits, target=labels.float())
+
+                    y_true.append(labels.numpy())
+                    y_score.append(logits.numpy())
+
+                    if (i + 1) % 10 == 0:
+                        logging.info("Progress: %d / %d", i + 1, len(eval_loader))
+
+            accuracy, f1, roc_auc, ap, pr_auc = utilities.update_metrics(
+                y_true, y_score, phase, summary_writer, epoch + 1)
+
+            metrics = {
+                "accuracy": accuracy,
+                "f1": f1,
+                "roc_auc": roc_auc,
+                "ap": ap,
+                "pr_auc": pr_auc,
+            }
+
+            for metric_name, metric in metrics.items():
+                if (metric_name not in best_metrics or
+                        metric >= best_metrics[metric_name][0]):
+                    if metric_name in best_metrics:
+                        old_checkpoint_name = best_checkpoint_name.format(
+                            metric=metric_name, epoch=best_metrics[metric_name][1])
+                        if os.path.exists(old_checkpoint_name):
+                            os.remove(old_checkpoint_name)
+
+                    torch.save(
+                        model.state_dict(),
+                        best_checkpoint_name.format(metric=metric_name, epoch=epoch + 1))
+                    best_metrics[metric_name] = (metric, epoch + 1)
+                    logging.info("Saving best model: best %s of %.4f in epoch %d",
+                                 metric_name, metric, epoch + 1)
+
+    except KeyboardInterrupt:
+        logging.info("Interruppted. Stop training.")
+
         logging.info("Saving model checkpoint...")
+        checkpoint_name = os.path.join(
+            root_dir, "checkpoint_epoch%03d_step%03d.model" % (epoch + 1, step + 1))
         torch.save(model.state_dict(), checkpoint_name)
+        logging.info("Model saved at %s", checkpoint_name)
 
-      phase = "evaluation"
-      model.eval()
-      logging.info("Start inference.")
-
-      y_true, y_score = [], []
-      with torch.set_grad_enabled(False):
-        for i, (inputs, labels, _) in enumerate(eval_loader):
-          logits, endpoints = model(inputs)
-          loss = criterion(input=logits, target=labels.float())
-
-          y_true.append(labels.numpy())
-          y_score.append(logits.numpy())
-
-          if (i + 1) % 10 == 0:
-            logging.info("Progress: %d / %d", i + 1, len(eval_loader))
-
-      accuracy, f1, roc_auc, ap, pr_auc = utilities.update_metrics(
-          y_true, y_score, phase, summary_writer, epoch + 1)
-
-      metrics = {
-          "accuracy": accuracy,
-          "f1": f1,
-          "roc_auc": roc_auc,
-          "ap": ap,
-          "pr_auc": pr_auc,
-      }
-
-      for metric_name, metric in metrics.items():
-        if (metric_name not in best_metrics or
-            metric >= best_metrics[metric_name][0]):
-          if metric_name in best_metrics:
-            old_checkpoint_name = best_checkpoint_name.format(
-                metric=metric_name, epoch=best_metrics[metric_name][1])
-            if os.path.exists(old_checkpoint_name):
-              os.remove(old_checkpoint_name)
-
-          torch.save(
-              model.state_dict(),
-              best_checkpoint_name.format(metric=metric_name, epoch=epoch + 1))
-          best_metrics[metric_name] = (metric, epoch + 1)
-          logging.info("Saving best model: best %s of %.4f in epoch %d",
-                       metric_name, metric, epoch + 1)
-
-  except KeyboardInterrupt:
-    logging.info("Interruppted. Stop training.")
-
-    logging.info("Saving model checkpoint...")
-    checkpoint_name = os.path.join(
-        root_dir, "checkpoint_epoch%03d_step%03d.model" % (epoch + 1, step + 1))
-    torch.save(model.state_dict(), checkpoint_name)
-    logging.info("Model saved at %s", checkpoint_name)
-
-  return
+    return
 
 
 def save_and_load_flags():
-  root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
-  flag_saving_path = os.path.join(root_dir, "configs.json")
+    root_dir = os.path.join(FLAGS.checkpoint_dir, FLAGS.experiment_name)
+    flag_saving_path = os.path.join(root_dir, "configs.json")
 
-  # Save model configurations
-  if FLAGS.phase == "train" or FLAGS.phase == "pipeline":
+    # Save model configurations
+    if FLAGS.phase == "train" or FLAGS.phase == "pipeline":
 
-    if os.path.isdir(root_dir):
-      raise ValueError(
-          "Target directory already exists. Please change `experiment_name`.")
+        if os.path.isdir(root_dir):
+            raise ValueError(
+                "Target directory already exists. Please change `experiment_name`.")
 
-    os.makedirs(root_dir)
+        os.makedirs(root_dir)
 
-    configs = {
-        "model_type": FLAGS.model_type,
-        "input_size": FLAGS.input_size,
-        "rnn_hidden_size": FLAGS.rnn_hidden_size,
-        "use_attention": FLAGS.use_attention,
-        "rnn_type": FLAGS.rnn_type,
-        "rnn_layers": FLAGS.rnn_layers,
-        "rnn_dropout": FLAGS.rnn_dropout,
-        "rnn_bidirectional": FLAGS.rnn_bidirectional,
-        "standardize": FLAGS.standardize,
-        "block_size": FLAGS.block_size,
-        "history_window": FLAGS.history_window,
-        "prediction_window": FLAGS.prediction_window,
-        "target_label": FLAGS.target_label,
-        "data_dir": FLAGS.data_dir,
-        "lr_pooling": FLAGS.lr_pooling,
-        "save_per_epochs": FLAGS.save_per_epochs,
-        "upper_bound_factor": FLAGS.upper_bound_factor,
-        "fix_eval_dataset_seed": FLAGS.fix_eval_dataset_seed,
-    }
+        configs = {
+            "model_type": FLAGS.model_type,
+            "input_size": FLAGS.input_size,
+            "rnn_hidden_size": FLAGS.rnn_hidden_size,
+            "use_attention": FLAGS.use_attention,
+            "rnn_type": FLAGS.rnn_type,
+            "rnn_layers": FLAGS.rnn_layers,
+            "rnn_dropout": FLAGS.rnn_dropout,
+            "rnn_bidirectional": FLAGS.rnn_bidirectional,
+            "standardize": FLAGS.standardize,
+            "block_size": FLAGS.block_size,
+            "history_window": FLAGS.history_window,
+            "prediction_window": FLAGS.prediction_window,
+            "target_label": FLAGS.target_label,
+            "data_dir": FLAGS.data_dir,
+            "lr_pooling": FLAGS.lr_pooling,
+            "save_per_epochs": FLAGS.save_per_epochs,
+            "upper_bound_factor": FLAGS.upper_bound_factor,
+            "fix_eval_dataset_seed": FLAGS.fix_eval_dataset_seed,
+        }
 
-    with open(flag_saving_path, "w") as fp:
-      configs = json.dump(configs, fp, indent=2)
+        with open(flag_saving_path, "w") as fp:
+            configs = json.dump(configs, fp, indent=2)
 
-  if not os.path.exists(flag_saving_path):
-    raise AssertionError(
-        "Training model configuration didn't find, please double check "
-        "`checkpoint_dir` and `experiment_name`.")
+    if not os.path.exists(flag_saving_path):
+        raise AssertionError(
+            "Training model configuration didn't find, please double check "
+            "`checkpoint_dir` and `experiment_name`.")
 
-  with open(flag_saving_path, "r") as fp:
-    configs = json.load(fp)
+    with open(flag_saving_path, "r") as fp:
+        configs = json.load(fp)
 
-  logging.info("Saved model parameters:")
-  for i, (key, val) in enumerate(configs.items()):
-    logging.info("%d: %s=%s", i, key, val)
+    logging.info("Saved model parameters:")
+    for i, (key, val) in enumerate(configs.items()):
+        logging.info("%d: %s=%s", i, key, val)
 
-  return configs
+    return configs
 
 
 def main(unused_argv):
+    configs = save_and_load_flags()
 
-  configs = save_and_load_flags()
-
-  if FLAGS.phase == "train":
-    logging.info("Mode: Training")
-    train(configs)
-  elif FLAGS.phase == "inference":
-    logging.info("Mode: Inference")
-    inference(configs)
-  elif FLAGS.phase == "pipeline":
-    logging.info("Mode: Train/Eval pipeline")
-    pipeline(configs)
+    if FLAGS.phase == "train":
+        logging.info("Mode: Training")
+        train(configs)
+    elif FLAGS.phase == "inference":
+        logging.info("Mode: Inference")
+        inference(configs)
+    elif FLAGS.phase == "pipeline":
+        logging.info("Mode: Train/Eval pipeline")
+        pipeline(configs)
 
 
 if __name__ == "__main__":
-  app.run(main)
+    app.run(main)
