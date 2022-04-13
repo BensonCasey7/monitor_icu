@@ -86,7 +86,7 @@ class MimicDataset(torch.utils.data.Dataset):
                 "Invalid `data_split`: Only `train`, `val` or `test` is supported.")
 
         self.raw_data = np.load(
-            os.path.join(self.data_dir, self.data_name % self.data_split)).item()
+            os.path.join(self.data_dir, self.data_name % self.data_split), allow_pickle=True).item()
 
         self.labels, self.durations = self._load_labels()
 
