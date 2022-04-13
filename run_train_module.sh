@@ -10,11 +10,11 @@ LOG_DIR="./debug/logs"
 
 rm -rf ${LOG_DIR}
 
-rm -rf "./experiments"
+rm -rf "./debug/experiments"
 
 mkdir -p ${LOG_DIR}
 
-python code/main.py \
+python3 code/main.py \
   --phase="pipeline" \
   --model_type="lr" \
   --rnn_type="lstm" \

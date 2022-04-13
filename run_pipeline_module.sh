@@ -10,6 +10,7 @@ DATA_DIR="./data"
 LOG_DIR="./logs"
 
 mkdir -p ${LOG_DIR}
+rm -r "./experiments/${EXPERIMENT}"
 
 python3 code/main.py \
   --phase="pipeline" \

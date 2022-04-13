@@ -9,7 +9,7 @@ LOG_DIR="./logs"
 
 mkdir -p ${LOG_DIR}
 
-python code/main.py \
+python3 code/main.py \
   --phase=inference \
   --batch_size=128 \
   --eval_data_split="test" \
