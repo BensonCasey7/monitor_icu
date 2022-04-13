@@ -10,10 +10,10 @@ from scipy.sparse import csr_matrix
 # Total HADM IDs: 22049
 VOC_SIZE = 4222  # added abnormal_high, abnormal_low flags, total 4225, excluding "Sepsis1", "Death0", "Death1"
 WINDOW_LENGTH = 1  # 1 hour per block
-SPLIT_DIR = "../data/"
-RAW_DATA = "../raw_data/MIMIC_FULL_BATCH.csv"
-VOCABULARY_FILE = "../data/events_vocabulary.csv"
-HADM_INFO_FILE = "../data/hadm_infos.csv"
+SPLIT_DIR = "./data/"
+RAW_DATA = "./raw_data/MIMIC_FULL_BATCH.csv"
+VOCABULARY_FILE = "./data/events_vocabulary.csv"
+HADM_INFO_FILE = "./data/hadm_infos.csv"
 
 
 def get_data_splits(dir_path):
@@ -47,7 +47,7 @@ if not os.path.exists(VOCABULARY_FILE) or not os.path.exists(HADM_INFO_FILE):
             hadm_id = row["HADM_ID"]
             all_hadm_ids.add(hadm_id)
 
-            time = int(row["TIME"])
+            time = int(row["Time_to_Discharge"])
             if event == "Sepsis1":
                 sepsis_time[hadm_id] = time
             elif event == "Death0":
@@ -146,7 +146,7 @@ with open(RAW_DATA, "r") as fp:
                 record = np.zeros((hadm_length[hadm_id], VOC_SIZE))
 
         key = row["EventType"] + row["ITEMID2"]
-        block = int(row["TIME"]) // WINDOW_LENGTH
+        block = int(row["Time_to_Discharge"]) // WINDOW_LENGTH
         if key not in events_vocabulary:
             # print("%s not in events vocabulary." % key)
             continue
@@ -169,10 +169,10 @@ with open(RAW_DATA, "r") as fp:
         target[hadm_id] = csr_matrix(record)
 
 print("Saving train.")
-np.save("../data/train_interval%d_data" % WINDOW_LENGTH, output["train"])
+np.save("./data/train_interval%d_data" % WINDOW_LENGTH, output["train"])
 
 print("Saving test.")
-np.save("../data/test_interval%d_data" % WINDOW_LENGTH, output["test"])
+np.save("./data/test_interval%d_data" % WINDOW_LENGTH, output["test"])
 
 print("Saving val.")
-np.save("../data/val_interval%d_data" % WINDOW_LENGTH, output["val"])
+np.save("./data/val_interval%d_data" % WINDOW_LENGTH, output["val"])
