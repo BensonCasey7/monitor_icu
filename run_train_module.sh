@@ -21,8 +21,8 @@ python3 code/main.py \
   --nornn_bidirectional \
   --use_attention \
   --batch_size=128 \
-  --input_size=256 \
-  --rnn_hidden_size=256 \
+  --input_size=64 \
+  --rnn_hidden_size=64 \
   --num_epochs=10 \
   --learning_rate=1e-2 \
   --train_data_split="train" \

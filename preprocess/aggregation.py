@@ -48,6 +48,7 @@ if not os.path.exists(VOCABULARY_FILE) or not os.path.exists(HADM_INFO_FILE):
             all_hadm_ids.add(hadm_id)
 
             time = int(row["Time_to_Discharge"])
+            time = 100
             if event == "Sepsis1":
                 sepsis_time[hadm_id] = time
             elif event == "Death0":
