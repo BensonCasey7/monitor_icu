@@ -12,7 +12,8 @@ select adm.HADM_ID,
 case when adm.DEATHTIME is not null then 1 else 0 end as ITEMID,
 case when adm.DEATHTIME is not null then 1 else 0 end as ITEMID2,
 adm.ADMITTIME as EventStartTime,
-timestampdiff(hour,adm.DISCHTIME,adm.DISCHTIME) as Time_to_Discharge
+timestampdiff(hour,adm.DISCHTIME,adm.ADMITTIME) as Time_to_Discharge
+# timestampdiff(hour,adm.DISCHTIME,adm.DISCHTIME) as Time_to_Discharge
 from mimiciiiv14.ADMISSIONS adm
 #and adm.HADM_ID = 105017
 
@@ -58,6 +59,7 @@ from mimiciiiv14.ADMISSIONS adm
 left join mimiciiiv14.CHARTEVENTS vit on adm.HADM_ID = vit.HADM_ID
 where vit.ITEMID is not null
 #and adm.HADM_ID = 105017
+limit 1000000
     ) T
 order by HADM_ID,Time_to_Discharge
 ;
@@ -68,7 +70,7 @@ order by HADM_ID,Time_to_Discharge
 set @row_number = 0;
 drop table if exists CS3750_Group2.KY_ADM_LENGTH;
 create table CS3750_Group2.KY_ADM_LENGTH as
-select (@row_number:=@row_number + 1) as row,
+select (@row_number:=@row_number + 1) as `row`,
 t.* from
 (select HADM_ID, -1 * min(Time_to_Discharge) adm_length
  from CS3750_Group2.KY_MIMIC_EVENTS_V4
@@ -77,6 +79,7 @@ t.* from
 
 
 #create reference table
+drop table if exists CS3750_Group2.KY_LABEL_REF;
 create table CS3750_Group2.KY_LABEL_REF as
 select *
 from (
