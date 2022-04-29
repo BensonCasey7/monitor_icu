@@ -226,7 +226,8 @@ class MimicDataset(torch.utils.data.Dataset):
                 prediction_window = range(
                     start_time + self.history_window,
                     start_time + self.history_window + self.prediction_window)
-                label = label_time in prediction_window
+                label = abs(label_time) in prediction_window
+                # If label_time in prediction_window, then below will be appended to positives; negatives otherwise
                 [negatives, positives][label].append((hadm_id, history_window, label))
             # Mar 6: pre-sample the negatives set of this hadm_id to be a set with a
             # size no larger than uppder_bound_each_hadm_id

@@ -48,7 +48,6 @@ if not os.path.exists(VOCABULARY_FILE) or not os.path.exists(HADM_INFO_FILE):
             all_hadm_ids.add(hadm_id)
 
             time = int(row["Time_to_Discharge"])
-            time = 100
             if event == "Sepsis1":
                 sepsis_time[hadm_id] = time
             elif event == "Death0":
@@ -85,8 +84,13 @@ if not os.path.exists(VOCABULARY_FILE) or not os.path.exists(HADM_INFO_FILE):
             else:
                 raise ValueError("Unknown data split.")
 
-            hadm_length[x] = max(0 if x not in discharge_time else discharge_time[x],
-                                 0 if x not in death_time else death_time[x])
+            if x in discharge_time:
+                hadm_length[x] = abs(discharge_time[x])
+            elif x in death_time:
+                hadm_length[x] = abs(death_time[x])
+            else:
+                hadm_length[x] = 0
+
 
             writer.writerow([
                 x,
