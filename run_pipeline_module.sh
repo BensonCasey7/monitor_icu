@@ -21,7 +21,7 @@ python3 code/main.py \
   --batch_size=128 \
   --input_size=256 \
   --rnn_hidden_size=256 \
-  --num_epochs=5 \
+  --num_epochs=25 \
   --learning_rate=1e-3 \
   --train_data_split="train" \
   --eval_data_split="val" \

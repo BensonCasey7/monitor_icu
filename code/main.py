@@ -157,10 +157,8 @@ def train(configs):
     logging.info("Initializatoin complete. Start training.")
     try:
         for epoch in range(FLAGS.num_epochs):
-            scheduler.step()
-
             summary_writer.add_scalar("learning_rate",
-                                      scheduler.get_lr()[0], epoch + 1)
+                                      scheduler.get_last_lr(), epoch + 1)
 
             # Resample training dataset.
             train_dataset.resample()
@@ -192,6 +190,8 @@ def train(configs):
                                    loss.item(),
                                    (end_time - start_time) * 100 / logits.shape[0]))
                     start_time = time.time()
+
+            scheduler.step()
 
             utilities.update_metrics(y_true, y_score, phase, summary_writer,
                                      epoch + 1)
@@ -402,8 +402,9 @@ def pipeline(configs):
         logging.info("%s: %s", name, param.size())
 
     optimizer = torch.optim.RMSprop(model.parameters(), lr=FLAGS.learning_rate)
-    scheduler = torch.optim.lr_scheduler.StepLR(
-        optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
+    # scheduler = torch.optim.lr_scheduler.StepLR(
+    #     optimizer, step_size=FLAGS.num_epochs // 5, gamma=0.3)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.3)
 
     best_metrics = {}
     best_checkpoint_name = os.path.join(
@@ -418,9 +419,8 @@ def pipeline(configs):
             phase = "training"
             model.train()
 
-            scheduler.step()
             summary_writer.add_scalar("learning_rate",
-                                      scheduler.get_lr()[0], epoch + 1)
+                                      scheduler.get_last_lr(), epoch + 1)
 
             # Resample training dataset.
             train_dataset.resample()
@@ -450,6 +450,8 @@ def pipeline(configs):
                                    loss.item(),
                                    (end_time - start_time) * 100 / logits.shape[0]))
                     start_time = time.time()
+
+            scheduler.step()
 
             utilities.update_metrics(y_true, y_score, phase, summary_writer,
                                      epoch + 1)
