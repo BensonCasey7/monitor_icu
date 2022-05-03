@@ -6,15 +6,21 @@ HADM_ID,
 EventType,ITEMID,ITEMID2,EventStartTime, Time_to_Discharge
 from
 (
+with sampled_patients as (select distinct HADM_ID
+                          from mimiciiiv14.ADMISSIONS
+                          order by rand()
+                          limit 25000)
 select adm.HADM_ID,
 #adm.DISCHTIME,adm.DEATHTIME,
 'Death' as EventType,
+-- It would appear that it is always 0, which is no good
 case when adm.DEATHTIME is not null then 1 else 0 end as ITEMID,
 case when adm.DEATHTIME is not null then 1 else 0 end as ITEMID2,
 adm.ADMITTIME as EventStartTime,
 timestampdiff(hour,adm.DISCHTIME,adm.ADMITTIME) as Time_to_Discharge
 # timestampdiff(hour,adm.DISCHTIME,adm.DISCHTIME) as Time_to_Discharge
 from mimiciiiv14.ADMISSIONS adm
+         inner join sampled_patients on adm.HADM_ID = sampled_patients.HADM_ID
 #and adm.HADM_ID = 105017
 
 union all
@@ -29,6 +35,7 @@ end as ITEMID2,
 lab.CHARTTIME as EventStartTime,
 timestampdiff(hour,adm.DISCHTIME,lab.CHARTTIME) as Time_to_Discharge
 from mimiciiiv14.ADMISSIONS adm
+         inner join sampled_patients on adm.HADM_ID = sampled_patients.HADM_ID
 left join mimiciiiv14.LABEVENTS lab on adm.HADM_ID = lab.HADM_ID
 where lab.ITEMID is not null
 #and adm.HADM_ID = 105017
@@ -40,6 +47,7 @@ select adm.HADM_ID,
 'Med' as EventType, med.ITEMID, med.ITEMID as ITEMID2,med.STARTTIME as EventStartTime,
 timestampdiff(hour, adm.DISCHTIME, med.STARTTIME) as Time_to_Discharge
 from mimiciiiv14.ADMISSIONS adm
+         inner join sampled_patients on adm.HADM_ID = sampled_patients.HADM_ID
 left join mimiciiiv14.INPUTEVENTS_MV med on adm.HADM_ID = med.HADM_ID
 where  med.ITEMID is not null
 #and adm.HADM_ID = 105017
@@ -56,10 +64,10 @@ end as ITEMID2,
 vit.CHARTTIME as EventStartTime,
 timestampdiff(hour, adm.DISCHTIME, vit.CHARTTIME) as Time_to_Discharge
 from mimiciiiv14.ADMISSIONS adm
+         inner join sampled_patients on adm.HADM_ID = sampled_patients.HADM_ID
 left join mimiciiiv14.CHARTEVENTS vit on adm.HADM_ID = vit.HADM_ID
 where vit.ITEMID is not null
 #and adm.HADM_ID = 105017
-limit 1000000
     ) T
 order by HADM_ID,Time_to_Discharge
 ;
