@@ -18,17 +18,17 @@ python3 code/main.py \
   --rnn_type="lstm" \
   --rnn_bidirectional \
   --nouse_attention \
-  --batch_size=128 \
+  --batch_size=8 \
   --input_size=256 \
   --rnn_hidden_size=256 \
   --num_epochs=25 \
-  --learning_rate=1e-3 \
+  --learning_rate=1e-2 \
   --train_data_split="train" \
   --eval_data_split="val" \
   --data_dir="${DATA_DIR}" \
   --target_label="${TARGET}" \
   --block_size=6 \
-  --history_window=56 \
+  --history_window=4 \
   --prediction_window=4 \
   --train_dataset_size=0 \
   --eval_dataset_size=0 \
